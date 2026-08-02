@@ -49,6 +49,8 @@ typedef struct {
   float target_x;
   float target_y;
 
+  int destination;
+
   Color color;
 } Thing;
 
@@ -61,6 +63,11 @@ int towers_length = 0;
 Thing enemies[2000] = {0};
 int enemies_length = 0;
 
+Vector2 path[] = {
+    {640, 240}, {500, 240}, {500, 100}, {250, 100}, {250, 350}, {0, 350},
+};
+int path_length = 6;
+
 int main() {
   SetTargetFPS(FPS);
   InitWindow(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, "TOWER GAME");
@@ -68,25 +75,15 @@ int main() {
   Thing enemy = {0};
   enemy.height = 25;
   enemy.width = 25;
-  enemy.x = VIRTUAL_WIDTH - enemy.height;
-  enemy.y = (VIRTUAL_HEIGHT / 2.0f) - enemy.height / 2.0f;
-  enemy.health = 20;
+  enemy.x = path[0].x;
+  enemy.y = path[0].y;
+  enemy.destination = 1;
+  enemy.health = 200;
   enemy.color = RED;
   enemy.movement_speed = 1;
   enemy.damage = 1;
 
-  Thing enemy2 = {0};
-  enemy2.height = 25;
-  enemy2.width = 25;
-  enemy2.x = VIRTUAL_WIDTH - enemy2.height + 100;
-  enemy2.y = (VIRTUAL_HEIGHT / 2.0f) - enemy2.height / 2.0f;
-  enemy2.health = 20;
-  enemy2.color = RED;
-  enemy2.movement_speed = 1;
-  enemy2.damage = 1;
-
   enemies[enemies_length++] = enemy;
-  enemies[enemies_length++] = enemy2;
 
   Thing heart = {0};
   heart.health = 100;
@@ -128,7 +125,26 @@ int main() {
     for (int i = 0; i < enemies_length; i++) {
       Thing *enemy = &enemies[i];
 
-      enemy->x -= enemy->movement_speed;
+      Vector2 destination = path[enemy->destination];
+
+      float distance_x = destination.x - enemy->x;
+      float distance_y = destination.y - enemy->y;
+
+      float magnitude =
+          sqrtf(distance_x * distance_x + distance_y * distance_y);
+
+      enemy->dx = distance_x / magnitude;
+      enemy->dy = distance_y / magnitude;
+
+      enemy->x += enemy->dx * enemy->movement_speed;
+      enemy->y += enemy->dy * enemy->movement_speed;
+
+      // Update enemy's next destination when it reaches current destination
+      if (magnitude <= enemy->movement_speed) {
+        enemy->x = destination.x;
+        enemy->y = destination.y;
+        enemy->destination++;
+      }
     }
 
     // Check for projectile collision
@@ -154,8 +170,14 @@ int main() {
       Thing *enemy = &enemies[i];
 
       // Lose health when enemies reach the end of the path
-      if (enemy->x == 0) {
+      if (enemy->destination == path_length) {
         heart.health = heart.health - enemy->damage;
+
+        // Have enemies die when they reach the end of path
+        enemies[i] = enemies[enemies_length - 1];
+        enemies_length--;
+        i--;
+
         printf("%i\n", heart.health);
       }
 
@@ -218,7 +240,10 @@ int main() {
     // ============================================================================
     BeginDrawing();
 
-    DrawRectangle(0, (VIRTUAL_HEIGHT / 2.0f) - 50, VIRTUAL_WIDTH, 100, BROWN);
+    // Draw Path
+    for (int i = 0; i < path_length - 1; i++) {
+      DrawLineEx(path[i], path[i + 1], 40.0f, BROWN);
+    }
 
     // Draw Radius
     DrawCircle(tower.x + tower.width / 2.0f, tower.y + tower.height / 2.0f,
