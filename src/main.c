@@ -4,6 +4,7 @@
 #include <math.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <sys/types.h>
 
 typedef int8_t i8;
 typedef int16_t i16;
@@ -49,10 +50,8 @@ typedef struct {
   float target_y;
 
   Color color;
-  int parentind;
 } Thing;
 
-#define EMPTY 0
 Thing projectiles[2000] = {0};
 int projectiles_length = 0;
 
@@ -71,10 +70,23 @@ int main() {
   enemy.width = 25;
   enemy.x = VIRTUAL_WIDTH - enemy.height;
   enemy.y = (VIRTUAL_HEIGHT / 2.0f) - enemy.height / 2.0f;
-  enemy.health = 10;
+  enemy.health = 20;
   enemy.color = RED;
   enemy.movement_speed = 1;
   enemy.damage = 1;
+
+  Thing enemy2 = {0};
+  enemy2.height = 25;
+  enemy2.width = 25;
+  enemy2.x = VIRTUAL_WIDTH - enemy2.height + 100;
+  enemy2.y = (VIRTUAL_HEIGHT / 2.0f) - enemy2.height / 2.0f;
+  enemy2.health = 20;
+  enemy2.color = RED;
+  enemy2.movement_speed = 1;
+  enemy2.damage = 1;
+
+  enemies[enemies_length++] = enemy;
+  enemies[enemies_length++] = enemy2;
 
   Thing heart = {0};
   heart.health = 100;
@@ -112,66 +124,93 @@ int main() {
       projectile->y += projectile->dy * projectile->movement_speed;
     }
 
+    // Move Enemies
+    for (int i = 0; i < enemies_length; i++) {
+      Thing *enemy = &enemies[i];
+
+      enemy->x -= enemy->movement_speed;
+    }
+
     // Check for projectile collision
     for (int i = 0; i < projectiles_length; i++) {
       Thing *projectile = &projectiles[i];
 
-      if (CheckCollisionRecs(
-              (Rectangle){projectile->x, projectile->y, projectile->width,
-                          projectile->height},
-              (Rectangle){enemy.x, enemy.y, enemy.width, enemy.height})) {
-        enemy.health = enemy.health - projectile->damage;
-        projectiles[i] = projectiles[projectiles_length--];
+      for (int j = 0; j < enemies_length; j++) {
+        Thing *enemy = &enemies[j];
+
+        if (CheckCollisionRecs(
+                (Rectangle){projectile->x, projectile->y, projectile->width,
+                            projectile->height},
+                (Rectangle){enemy->x, enemy->y, enemy->width, enemy->height})) {
+          enemy->health = enemy->health - projectile->damage;
+          projectiles[i] = projectiles[projectiles_length - 1];
+          projectiles_length--;
+          i--;
+        }
+      }
+    }
+
+    for (int i = 0; i < enemies_length; i++) {
+      Thing *enemy = &enemies[i];
+
+      // Lose health when enemies reach the end of the path
+      if (enemy->x == 0) {
+        heart.health = heart.health - enemy->damage;
+        printf("%i\n", heart.health);
+      }
+
+      // Have enemies die when they reach 0 health
+      if (enemy->health <= 0) {
+        enemies[i] = enemies[enemies_length - 1];
+        enemies_length--;
         i--;
       }
     }
 
-    if (enemy.health <= 0) {
-    }
+    // Have tower shoot projectile if enemy is in range
+    if (tower.attack_cooldown <= 0.0f) {
 
-    enemy.x = enemy.x - enemy.movement_speed;
-    if (enemy.x == 0) {
-      heart.health = heart.health - enemy.damage;
-      printf("%i\n", heart.health);
-    }
+      for (int i = 0; i < enemies_length; i++) {
+        Thing *enemy = &enemies[i];
 
-    if (tower.attack_cooldown <= 0.0f &&
-        CheckCollisionCircleRec(
-            (Vector2){tower.x + (tower.width / 2.0f),
-                      tower.y + (tower.height / 2.0f)},
-            tower.attack_radius,
-            (Rectangle){enemy.x, enemy.y, enemy.width, enemy.height})) {
+        if (CheckCollisionCircleRec(
+                (Vector2){tower.x + tower.width / 2.0f,
+                          tower.y + tower.height / 2.0f},
+                tower.attack_radius,
+                (Rectangle){enemy->x, enemy->y, enemy->width, enemy->height})) {
 
-      tower.attack_cooldown = 1.0f / tower.attack_speed; // (CG)feels wrong
-      // Spawn Projectile
-      Thing projectile;
-      projectile.height = 10;
-      projectile.width = 10;
-      projectile.x = VIRTUAL_WIDTH / 2.0f - projectile.width / 2.0f;
-      projectile.y = (VIRTUAL_HEIGHT / 2.0f) - projectile.height / 2.0f -
-                     (50 + projectile.height / 2.0f);
-      projectile.color = BLUE;
-      projectile.damage = 1;
-      //   projectile.attack_speed = 1;
-      projectile.attack_radius = 150;
-      projectile.movement_speed = 10;
-      projectile.color = GRAY;
+          tower.attack_cooldown = 1.0f / tower.attack_speed; // (CG)feels wrong
+                                                             // Spawn Projectile
+          Thing projectile;
+          projectile.height = 10;
+          projectile.width = 10;
+          projectile.x = VIRTUAL_WIDTH / 2.0f - projectile.width / 2.0f;
+          projectile.y = (VIRTUAL_HEIGHT / 2.0f) - projectile.height / 2.0f -
+                         (50 + projectile.height / 2.0f);
+          projectile.color = BLUE;
+          projectile.damage = 1;
+          projectile.attack_radius = 150;
+          projectile.movement_speed = 10;
+          projectile.color = GRAY;
 
-      projectile.target_x = enemy.x;
-      projectile.target_y = enemy.y;
+          projectile.target_x = enemy->x;
+          projectile.target_y = enemy->y;
 
-      float distance_x = projectile.target_x - projectile.x;
-      float distance_y = projectile.target_y - projectile.y;
+          float distance_x = projectile.target_x - projectile.x;
+          float distance_y = projectile.target_y - projectile.y;
 
-      float magnitude =
-          sqrtf(distance_x * distance_x + distance_y * distance_y);
+          float magnitude =
+              sqrtf(distance_x * distance_x + distance_y * distance_y);
 
-      projectile.dx = distance_x / magnitude;
-      projectile.dy = distance_y / magnitude;
+          projectile.dx = distance_x / magnitude;
+          projectile.dy = distance_y / magnitude;
 
-      projectiles[projectiles_length++] = projectile;
-      //   enemy.health -= projectile.damage;
-      printf("%i\n", enemy.health);
+          projectiles[projectiles_length++] = projectile;
+          enemy->health -= projectile.damage;
+          printf("Enemy:%d\nHealth:%i\n", i, enemy->health);
+          break;
+        }
+      }
     }
 
     // ============================================================================
@@ -181,18 +220,25 @@ int main() {
 
     DrawRectangle(0, (VIRTUAL_HEIGHT / 2.0f) - 50, VIRTUAL_WIDTH, 100, BROWN);
 
-    DrawCircle(tower.x + tower.width / 2, tower.y + tower.height / 2,
+    // Draw Radius
+    DrawCircle(tower.x + tower.width / 2.0f, tower.y + tower.height / 2.0f,
                tower.attack_radius, LIGHTGRAY);
+
+    // Draw Tower
     DrawRectangle(tower.x, tower.y, tower.width, tower.height, tower.color);
-    Rectangle tower_rect = {tower.x, tower.y, tower.width, tower.height};
-    // DrawRectangleRoundedLines(tower_rect, 2, 4, BLACK);
 
-    DrawRectangle(enemy.x, enemy.y, enemy.width, enemy.height, enemy.color);
+    // Draw Enemies
+    for (int i = 0; i < enemies_length; i++) {
+      Thing *enemy = &enemies[i];
+      DrawRectangle(enemy->x, enemy->y, enemy->width, enemy->height,
+                    enemy->color);
+    }
 
+    // Draw Projectiles
     for (int i = 0; i < projectiles_length; i++) {
-      Thing projectile = projectiles[i];
-      DrawRectangle(projectile.x, projectile.y, projectile.width,
-                    projectile.height, projectile.color);
+      Thing *projectile = &projectiles[i];
+      DrawRectangle(projectile->x, projectile->y, projectile->width,
+                    projectile->height, projectile->color);
     }
 
     ClearBackground(BLACK);
