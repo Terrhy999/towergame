@@ -112,6 +112,45 @@ void SpawnProjectile(Thing *tower, Thing *enemy) {
   projectiles[projectiles_length++] = projectile;
 }
 
+int FindTarget(Thing *tower) {
+  // Find the enemy closest to the end, in the radius of this tower
+  int closest_enemy_index = -1;
+  float closest_enemy_distance = INFINITY;
+
+  for (int i = 0; i < enemies_length; i++) {
+    Thing *enemy = &enemies[i];
+
+    if (CheckCollisionCircleRec(
+            (Vector2){tower->x + tower->width / 2.0f,
+                      tower->y + tower->height / 2.0f},
+            tower->attack_radius,
+            (Rectangle){enemy->x, enemy->y, enemy->width, enemy->height})) {
+
+      float distance_x = enemy->x - path[enemy->destination].x;
+      float distance_y = enemy->y - path[enemy->destination].y;
+
+      float magnitude =
+          sqrtf(distance_x * distance_x + distance_y * distance_y);
+
+      if (closest_enemy_index == -1) {
+        closest_enemy_index = i;
+        closest_enemy_distance = magnitude;
+      }
+
+      if (enemy->destination > enemies[closest_enemy_index].destination) {
+        closest_enemy_index = i;
+        closest_enemy_distance = magnitude;
+      } else if (enemy->destination ==
+                     enemies[closest_enemy_index].destination &&
+                 magnitude < closest_enemy_distance) {
+        closest_enemy_index = i;
+        closest_enemy_distance = magnitude;
+      }
+    }
+  }
+  return closest_enemy_index;
+}
+
 int main() {
   SetTargetFPS(FPS);
   InitWindow(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, "TOWER GAME");
@@ -239,41 +278,7 @@ int main() {
       if (tower->attack_cooldown <= 0.0f) {
 
         // Find the enemy closest to the end, in the radius of this tower
-        int closest_enemy_index = -1;
-        float closest_enemy_distance = INFINITY;
-
-        for (int i = 0; i < enemies_length; i++) {
-          Thing *enemy = &enemies[i];
-
-          if (CheckCollisionCircleRec(
-                  (Vector2){tower->x + tower->width / 2.0f,
-                            tower->y + tower->height / 2.0f},
-                  tower->attack_radius,
-                  (Rectangle){enemy->x, enemy->y, enemy->width,
-                              enemy->height})) {
-
-            float distance_x = enemy->x - path[enemy->destination].x;
-            float distance_y = enemy->y - path[enemy->destination].y;
-
-            float magnitude =
-                sqrtf(distance_x * distance_x + distance_y * distance_y);
-
-            if (closest_enemy_index == -1) {
-              closest_enemy_index = i;
-              closest_enemy_distance = magnitude;
-            }
-
-            if (enemy->destination > enemies[closest_enemy_index].destination) {
-              closest_enemy_index = i;
-              closest_enemy_distance = magnitude;
-            } else if (enemy->destination ==
-                           enemies[closest_enemy_index].destination &&
-                       magnitude < closest_enemy_distance) {
-              closest_enemy_index = i;
-              closest_enemy_distance = magnitude;
-            }
-          }
-        }
+        int closest_enemy_index = FindTarget(tower);
 
         if (closest_enemy_index != -1) {
           tower->attack_cooldown = 1.0 / tower->attack_speed;
