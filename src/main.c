@@ -170,8 +170,6 @@ int main() {
   tower.attack_radius = 150;
 
   towers[towers_length++] = tower;
-  // tower.health = 10;
-  // tower.movement_speed = 1;
 
   while (!WindowShouldClose()) {
     // ============================================================================
