@@ -1,4 +1,5 @@
 #include "raylib.h"
+#include "raymath.h"
 #include <asm-generic/errno.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -22,44 +23,46 @@ int main() {
   SetTargetFPS(FPS);
   InitWindow(VIRTUAL_WIDTH, VIRTUAL_HEIGHT, "TOWER GAME");
 
-    float path_timer = 0.0f;
-  Vector2 path[4000];
+  int max_path_length = 4000;
+  float path_timer = 0.0f;
+  Vector2 path[max_path_length];
   int path_length = 0;
 
   while (!WindowShouldClose()) {
 
     // Path drawing tool
-      BeginDrawing();
-      ClearBackground(BLACK);
+    BeginDrawing();
+    ClearBackground(BLACK);
 
-      if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-        path_length = 0;
-      }
-
-      if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-        path_timer -= GetFrameTime();
-
-        if (path_timer <= 0.0f) {
-          path[path_length++] = GetMousePosition();
-          path_timer = 1.0f / 30.0f;
-        }
-      }
-
-      for (int i = 0; i < path_length - 1; i++) {
-        DrawLineEx(path[i], path[i + 1], 20.0f, BROWN);
-      }
-
-      if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-        printf("Vector2 path[] = {\n}");
-
-        for (int i = 0; i < path_length; i++) {
-          printf("    {%0.0ff, %0.0ff},\n", path[i].x, path[i].y);
-        }
-
-        printf("};\n");
-        printf("int path_length = %d;\n", path_length);
-      }
-      EndDrawing();
-      continue;
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+      path_length = 0;
+      path[path_length++] = GetMousePosition();
     }
+
+    if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+      Vector2 mouse_position = GetMousePosition();
+
+      float distance = Vector2Distance(mouse_position, path[path_length - 1]);
+
+      if (distance >= 8.0f) {
+        path[path_length++] = mouse_position;
+      }
+    }
+
+    for (int i = 0; i < path_length - 1; i++) {
+      DrawLineEx(path[i], path[i + 1], 20.0f, BROWN);
+    }
+
+    if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+      printf("Vector2 path[] = {\n}");
+
+      for (int i = 0; i < path_length; i++) {
+        printf("    {%.0f, %.0f},\n", path[i].x, path[i].y);
+      }
+
+      printf("};\n");
+      printf("int path_length = %d;\n", path_length);
+    }
+    EndDrawing();
+  }
 }
