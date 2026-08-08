@@ -15,8 +15,8 @@ typedef uint16_t u16;
 typedef uint32_t u32;
 typedef uint64_t u64;
 
-#define VIRTUAL_WIDTH 640
-#define VIRTUAL_HEIGHT 480
+#define VIRTUAL_WIDTH 1280
+#define VIRTUAL_HEIGHT 960
 #define FPS 60
 
 int main() {
@@ -50,7 +50,8 @@ int main() {
     }
 
     for (int i = 0; i < path_length - 1; i++) {
-      DrawLineEx(path[i], path[i + 1], 20.0f, BROWN);
+      // DrawLineEx(path[i], path[i + 1], 20.0f, BROWN);
+      DrawCircleV(path[i], 10.0f, BROWN);
     }
 
     if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
@@ -62,6 +63,11 @@ int main() {
 
       printf("};\n");
       printf("int path_length = %d;\n", path_length);
+    }
+    for (int i = 0; i < path_length - 1; i++) {
+      if (Vector2Distance(path[i], path[i + 1]) > 8.0f) {
+        DrawLineEx(path[i], path[i + 1], 20.0, BROWN);
+      }
     }
     EndDrawing();
   }

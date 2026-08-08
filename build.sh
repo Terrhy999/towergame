@@ -10,8 +10,8 @@ clang ./src/main.c \
   -lglfw -lGL -lopenal -lm -lpthread -ldl -lrt -lX11 \
   -o ./build/towergame
 
-  clang ./src/path_editor.c \
-  -I./vendored/raylib/src/ \
-  ./vendored/raylib/src/libraylib.a \
-  -lglfw -lGL -lopenal -lm -lpthread -ldl -lrt -lX11 \
-  -o ./build/path_editor
+clang ./src/path_editor.c \
+-I./vendored/raylib/src/ \
+./vendored/raylib/src/libraylib.a \
+-lglfw -lGL -lopenal -lm -lpthread -ldl -lrt -lX11 \
+-o ./build/path_editor
